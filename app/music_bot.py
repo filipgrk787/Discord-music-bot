@@ -78,6 +78,38 @@ async def play(ctx, *, query):
     await queues[ctx.guild.id].put((title, url, ctx))
     await ctx.send(f"🔁 Queued: **{title}**\n🔗 {webpage_url}")
 
+class MusicControlView(discord.ui.View):
+    def __init__(self, ctx):
+        super().__init__(timeout=None)
+        self.ctx = ctx
+
+    @discord.ui.button(label="⏸ Pause", style=discord.ButtonStyle.primary)
+    async def pause(self, interaction: discord.Interaction, button: discord.ui.Button):
+        vc = self.ctx.voice_client
+        if vc and vc.is_playing():
+            vc.pause()
+            await interaction.response.send_message("⏸️ Paused.", ephemeral=True)
+        else:
+            await interaction.response.send_message("Nothing is playing.", ephemeral=True)
+
+    @discord.ui.button(label="▶ Resume", style=discord.ButtonStyle.success)
+    async def resume(self, interaction: discord.Interaction, button: discord.ui.Button):
+        vc = self.ctx.voice_client
+        if vc and vc.is_paused():
+            vc.resume()
+            await interaction.response.send_message("▶️ Resumed.", ephemeral=True)
+        else:
+            await interaction.response.send_message("Nothing to resume.", ephemeral=True)
+
+    @discord.ui.button(label="⏭ Skip", style=discord.ButtonStyle.danger)
+    async def skip(self, interaction: discord.Interaction, button: discord.ui.Button):
+        vc = self.ctx.voice_client
+        if vc and vc.is_playing():
+            vc.stop()
+            await interaction.response.send_message("⏭️ Skipped.", ephemeral=True)
+        else:
+            await interaction.response.send_message("Nothing to skip.", ephemeral=True)
+
 
 async def player_loop(ctx):
     while True:
@@ -94,7 +126,9 @@ async def player_loop(ctx):
                 break
 
             vc.play(source)
-            await ctx.send(f'🎶 Now playing: **{title}**')
+            view = MusicControlView(ctx)
+            await ctx.send(f'🎶 Now playing: **{title}**', view=view)
+
 
             while vc.is_playing() or vc.is_paused():
                 await asyncio.sleep(1)
